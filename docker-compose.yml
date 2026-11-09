@@ -1,26 +1,25 @@
 services:
   wechatpush-go:
+    image: ghcr.io/mmlxm2025/wechatpush-go:latest
     build:
       context: .
       args:
-        VCS_REF: ${VCS_REF:-local}
-        APP_VERSION: ${APP_VERSION:-2.0.0-dev}
-    image: ghcr.io/mmlxm2025/wechatpush-go:latest
+        VCS_REF: ${VCS_REF:-release}
+        APP_VERSION: ${APP_VERSION:-2.0.0}
     container_name: wechatpush-go
     restart: unless-stopped
     ports:
       - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-12121}:12121"
     environment:
-      - NODE_ENV=production
-      - PORT=12121
-      - DB_PATH=/app/database/notifier.db
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:?请在 .env 中设置 ENCRYPTION_KEY}
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?请在 .env 中设置 ADMIN_PASSWORD}
-      - TRUST_PROXY=${TRUST_PROXY:-false}
-      - WECHAT_API_BASE=${WECHAT_API_BASE:-https://qyapi.weixin.qq.com}
-      - TEST_INSTANCE_ID=${TEST_INSTANCE_ID:-}
-      - TZ=Asia/Shanghai
+      NODE_ENV: production
+      PORT: 12121
+      DB_PATH: /app/database/notifier.db
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?请在 .env 中设置 ENCRYPTION_KEY}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?请在 .env 中设置 ADMIN_PASSWORD}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      WECHAT_API_BASE: ${WECHAT_API_BASE:-https://qyapi.weixin.qq.com}
+      TZ: Asia/Shanghai
     volumes:
       - ./database:/app/database
       - ./logs:/app/logs

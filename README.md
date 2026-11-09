@@ -2,7 +2,7 @@
 
 类似 Server 酱的轻量级企业微信消息推送与回调服务，基于 **Go 1.27.3** 构建。通过企业微信自建应用将告警、监控、CI/CD 通知精准推送到指定成员/部门/标签，并支持企业微信双向回调验证与消息处理。
 
-本项目是 `qywx-notifier-plus` (`v2.0.0-dev`) 的 **Go 1:1 重构版**，完整保留多应用管理、三层发送开关、乐观锁并发控制 (`If-Match`)、双模式通知鉴权及全套 Web 管理界面，同时编译为无 CGO 依赖 (`CGO_ENABLED=0`) 的独立单文件二进制。
+本项目是 `qywx-notifier-plus` (`v2.0.0`) 的 **Go 1:1 重构版**，完整保留多应用管理、三层发送开关、乐观锁并发控制 (`If-Match`)、双模式通知鉴权及全套 Web 管理界面，同时编译为无 CGO 依赖 (`CGO_ENABLED=0`) 的独立单文件二进制。
 
 ---
 
@@ -308,7 +308,7 @@ docker compose up -d
 | `HOST_BIND` | `0.0.0.0` | 否 | Docker Compose 宿主机绑定地址（反代场景建议 `127.0.0.1`） |
 | `HOST_PORT` | `12121` | 否 | Docker Compose 宿主机映射端口 |
 | `DB_PATH` | `./database/notifier.db` | 否 | SQLite 数据库文件路径 |
-| `NODE_ENV` | `development` | 否 | 运行环境模式（生产环境设为 `production`） |
+| `NODE_ENV` | `production` | 否 | 运行环境模式（生产环境默认 `production`） |
 | `TRUST_PROXY` | `false` | 否 | 反向代理信任设置：`false`、`true`、`loopback`、跳数（如 `1`）或 IP/CIDR 列表 |
 | `WECHAT_API_BASE` | `https://qyapi.weixin.qq.com` | 否 | 企业微信 API 地址（生产环境强制校验 HTTPS 官方域名，自定义代理需同时设 `WECHAT_ALLOW_CUSTOM_API_BASE=1`） |
 | `SEND_DEDUP_TTL_MS` | `30000` | 否 | 相同消息幂等去重时间窗（毫秒），请求体传 `"force": true` 可跳过 |

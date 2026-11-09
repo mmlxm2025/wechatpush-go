@@ -12,8 +12,8 @@ RUN go version && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -
 
 FROM alpine:3.24
 
-ARG VCS_REF=local
-ARG APP_VERSION=2.0.0-dev
+ARG VCS_REF=release
+ARG APP_VERSION=2.0.0
 
 RUN apk add --no-cache ca-certificates tzdata wget \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
