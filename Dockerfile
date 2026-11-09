@@ -15,7 +15,7 @@ FROM alpine:3.24
 ARG VCS_REF=release
 ARG APP_VERSION=2.0.0
 
-RUN apk add --no-cache ca-certificates tzdata wget \
+RUN apk add --no-cache ca-certificates tzdata wget su-exec \
     && addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
@@ -24,8 +24,6 @@ COPY --from=builder /out/qywx-push /app/qywx-push
 COPY --from=builder /src/public /app/public
 
 RUN mkdir -p /app/database /app/logs && chown -R appuser:appgroup /app
-
-USER appuser
 
 ENV NODE_ENV=production \
     PORT=12121 \
@@ -39,4 +37,4 @@ EXPOSE 12121
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:12121/health/ready || exit 1
 
-ENTRYPOINT ["/app/qywx-push"]
+ENTRYPOINT ["sh", "-c", "mkdir -p /app/database /app/logs && chown -R appuser:appgroup /app/database /app/logs && exec su-exec appuser:appgroup /app/qywx-push"]
