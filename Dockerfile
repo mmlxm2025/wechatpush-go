@@ -35,6 +35,6 @@ ENV NODE_ENV=production \
 EXPOSE 12121
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:12121/health/ready || exit 1
+    CMD wget --no-verbose --tries=1 --spider "http://127.0.0.1:${PORT:-12121}/health/ready" || exit 1
 
 ENTRYPOINT ["sh", "-c", "mkdir -p /app/database /app/logs && chown -R appuser:appgroup /app/database /app/logs && exec su-exec appuser:appgroup /app/qywx-push"]
