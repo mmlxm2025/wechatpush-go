@@ -1,0 +1,67 @@
+# ===== 环境变量与密钥（严禁提交）=====
+.env
+.env.*
+!.env.example
+!env.template
+*.key
+*.pem
+
+# ===== 数据库与运行时状态 =====
+/database/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+
+# ===== 日志与运行进程文件 =====
+/logs/
+*.log
+/pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ===== Go 编译产物、备份与覆盖率 =====
+qywx-push
+qywx-push.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.bak
+*.bak-*
+coverage.*
+go.work
+go.work.sum
+
+# ===== 临时目录与打包交付物 =====
+.tmp/
+.cache/
+deploy/**/*.tar
+deploy/**/*.tar.gz
+deploy/**/*.tgz
+deploy/**/*.zip
+deploy/1panel-*/
+deploy/.env
+deploy/IMAGE_TAG
+
+# ===== IDE 与操作系统文件 =====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== 本地 AI 辅助工具配置 =====
+.claude/
+.Codex/
+.zcode/
+.mcp-ssh.lock
+AGENTS.md
+CLAUDE.md

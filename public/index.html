@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="qywx">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e0f2fe">
+    <title>应用总览 · 企业微信通知服务</title>
+    <link rel="icon" href="/public/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/public/app.css">
+    <link rel="stylesheet" href="/public/styles.css">
+    <script defer src="/public/vendor/lucide.min.js"></script>
+</head>
+<body class="app-safe-pad">
+    <a href="#main-content" class="app-skip-link">跳到主内容</a>
+    <div class="app-page w-full max-w-5xl min-w-0 mx-auto my-2 sm:my-4">
+        <!-- 顶部导航（公共组件渲染） -->
+        <div id="app-topnav" data-active="overview" class="glass-card p-3 sm:p-4 mb-3 sm:mb-4"></div>
+
+        <main id="main-content" class="glass-card p-4 sm:p-6 min-w-0" tabindex="-1">
+            <header class="flex items-center justify-between flex-wrap gap-3 mb-4 sm:mb-6">
+                <div class="min-w-0">
+                    <h1 class="app-type-page text-primary flex items-center gap-2">
+                        <i data-lucide="layout-grid" class="icon-lg flex-shrink-0" aria-hidden="true"></i>
+                        应用总览
+                    </h1>
+                    <p class="app-type-lead text-base-content/70 mt-1">
+                        管理企业微信自建应用，按企业分组。暂停、编辑或安全下线。
+                    </p>
+                </div>
+                <a href="/new" class="btn btn-primary gap-1.5 w-full sm:w-auto">
+                    <i data-lucide="plus" class="icon-sm"></i>
+                    新建应用
+                </a>
+            </header>
+
+            <!-- 加载中骨架（§7.2 loading） -->
+            <div id="loading-state" class="space-y-3">
+                <div class="app-skeleton h-16 w-full"></div>
+                <div class="app-skeleton h-16 w-full"></div>
+                <div class="app-skeleton h-16 w-full"></div>
+            </div>
+
+            <!-- 空状态（§8 empty-states：图标 + 文案 + CTA 垂直居中） -->
+            <div id="empty-state" class="hidden text-center py-16">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-4">
+                    <i data-lucide="bell-off" class="icon-xl text-primary/60"></i>
+                </div>
+                <p class="text-base-content/70">还没有应用</p>
+                <p class="text-sm text-base-content/50 mt-1">新建第一个应用，开始接收企业微信通知</p>
+                <a href="/new" class="btn btn-primary mt-5 gap-1.5">
+                    <i data-lucide="plus" class="icon-sm"></i>
+                    新建应用
+                </a>
+            </div>
+
+            <!-- 错误状态（§7.2 error） -->
+            <div id="error-state" class="hidden alert alert-error">
+                <i data-lucide="alert-circle" class="icon-md" aria-hidden="true"></i>
+                <span id="error-message">加载应用列表失败</span>
+                <button type="button" id="retry-btn" class="btn btn-sm btn-ghost">重试</button>
+            </div>
+
+            <!-- 应用列表（按 corpid 分组） -->
+            <div id="app-list" class="space-y-6"></div>
+        </main>
+
+        <footer class="text-center text-sm text-base-content/60 mt-4 mb-2">
+            <p class="flex items-center justify-center gap-1">
+                <i data-lucide="external-link" class="icon-sm" aria-hidden="true"></i>
+                <a href="https://www.wangwangit.com/" target="_blank" rel="noopener noreferrer" class="hover:text-primary transition-colors">一只会飞的旺旺</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- 公共组件脚本（顺序：toast/modal/http 在页面脚本之前） -->
+    <script src="/public/components/toast.js"></script>
+    <script src="/public/components/modal.js"></script>
+    <script src="/public/http.js"></script>
+    <script src="/public/topnav.js"></script>
+    <!-- 页面脚本（外置，避免 CSP 拦截内联脚本） -->
+    <script src="/public/script.js"></script>
+</body>
+</html>

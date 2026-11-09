@@ -1,0 +1,678 @@
+/*
+ * 公共设计系统（ui-ux-pro-max + web-design-guidelines）。
+ *
+ * 设计目标：
+ *   - 与现有 DaisyUI garden 主题共存，不覆盖 DaisyUI 核心类。
+ *   - 集中管理设计令牌：颜色 / 间距 / 圆角 / 阴影 / 图标尺寸 / 交互。
+ *   - 提供状态、焦点、响应式与 reduced-motion 的统一基线。
+ *   - 业务样式仍以 Tailwind utility 为主，本文件只放语义令牌与共享组件样式。
+ *
+ * 引入方式：<link rel="stylesheet" href="/public/styles.css">（CSP style-src 'self' 已放行）。
+ */
+
+:root {
+    /* ── 字体基线：PC 默认 1rem = 16px；字号一律用 rem 相对单位 ────── */
+    /* html font-size 保持 100%（浏览器默认 16px），不覆盖为固定 px。 */
+    --text-xs: 0.75rem;      /* 12px */
+    --text-sm: 0.875rem;     /* 14px */
+    --text-base: 1rem;       /* 16px · body */
+    --text-lg: 1.125rem;     /* 18px */
+    --text-xl: 1.25rem;      /* 20px */
+    --text-2xl: 1.5rem;      /* 24px */
+    --text-3xl: 1.875rem;    /* 30px */
+    --leading-body: 1.5;
+    --leading-tight: 1.25;
+
+    /* ── 间距令牌（8dp 节奏，§5 spacing-scale）────────────────────────── */
+    --space-xs: 0.25rem;   /* 4px  */
+    --space-sm: 0.5rem;    /* 8px  */
+    --space-md: 0.75rem;   /* 12px */
+    --space-lg: 1rem;      /* 16px */
+    --space-xl: 1.5rem;    /* 24px */
+    --space-2xl: 2rem;     /* 32px */
+
+    /* ── 圆角令牌（§4 effects-match-style，统一层级）────────────────── */
+    --radius-sm: 0.375rem;   /* 6px  - 小元素（badge/pill） */
+    --radius-md: 0.5rem;     /* 8px  - 卡片内分区、输入框 */
+    --radius-lg: 1rem;       /* 16px - 顶层 glass-card */
+    --radius-full: 9999px;
+
+    /* ── 阴影令牌（§4 elevation-consistent，统一高度层级）──────────── */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.35);
+
+    /* ── 状态色（与生命周期对应，文字始终伴随，不只靠颜色）────────── */
+    --app-status-draft: #b45309;      /* 待完善（加深保证 4.5:1 对比） */
+    --app-status-active: #15803d;     /* 运行中 */
+    --app-status-paused: #b91c1c;     /* 已暂停 */
+    --app-warn-duplicate: #92400e;    /* 重复身份告警 */
+    --app-focus-ring: 0 0 0 2px rgba(59, 130, 246, 0.5);
+
+    /* ── 动效令牌（§7 duration-timing / motion-consistency）────────── */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);   /* 进入：减速 */
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);    /* 退出：加速 */
+    --duration-fast: 150ms;
+    --duration-base: 200ms;
+    --duration-slow: 300ms;
+
+    /* ── 间距基线（保留兼容旧引用）────────────────────────────────── */
+    --app-gap: var(--space-lg);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 全局背景与 glass-card（原分散在 5 个 HTML <style>，现集中收敛）
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* 根字号 100% ≈ PC 16px；尊重用户浏览器默认字号缩放（可访问性）。 */
+html {
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    color-scheme: light;
+    /* 避免移动端双击缩放延迟，保留捏合缩放（不设置 user-scalable=no）。 */
+    touch-action: manipulation;
+}
+
+body {
+    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 45%, #bef264 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    min-height: 100dvh;
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+    /* 防止宽表/代码把整页撑出横向滚动条；局部滚动容器自行 overflow-x-auto。 */
+    overflow-x: clip;
+    -webkit-tap-highlight-color: rgba(17, 24, 39, 0.08);
+}
+
+/* 页面边距：Tailwind p-* 与刘海安全区取 max，mobile-first 断点对齐 sm/md。 */
+.app-safe-pad {
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+}
+@media (min-width: 640px) {
+    .app-safe-pad {
+        padding-top: max(1rem, env(safe-area-inset-top, 0px));
+        padding-right: max(1rem, env(safe-area-inset-right, 0px));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+        padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    }
+}
+@media (min-width: 768px) {
+    .app-safe-pad {
+        padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+        padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+        padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    }
+}
+
+/* 跳到主内容：键盘用户可见，默认移出视口。 */
+.app-skip-link {
+    position: absolute;
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    top: max(0.75rem, env(safe-area-inset-top, 0px));
+    z-index: 10050;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-md);
+    background: #111827;
+    color: #fff;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    text-decoration: none;
+    transform: translateY(-160%);
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+.app-skip-link:focus,
+.app-skip-link:focus-visible {
+    transform: translateY(0);
+    outline: none;
+    box-shadow: var(--shadow-focus);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 响应式字体角色（mobile-first，断点对齐 Tailwind sm/md/lg）
+ * 全部使用 rem；配合 text-xl sm:text-2xl 等 utility 亦可。
+ * ────────────────────────────────────────────────────────────────────── */
+.app-type-display {
+    font-size: var(--text-2xl);   /* 1.5rem · 24px */
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    text-wrap: balance;
+}
+.app-type-page {
+    font-size: var(--text-xl);    /* 1.25rem · 20px */
+    line-height: var(--leading-tight);
+    font-weight: 700;
+    text-wrap: balance;
+}
+.app-type-section {
+    font-size: var(--text-base);  /* 1rem · 16px */
+    line-height: var(--leading-tight);
+    font-weight: 600;
+    text-wrap: pretty;
+}
+.app-type-lead {
+    font-size: var(--text-sm);    /* 0.875rem · 14px */
+    line-height: var(--leading-body);
+}
+.app-type-body {
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+}
+.app-type-caption {
+    font-size: var(--text-xs);    /* 0.75rem · 12px */
+    line-height: 1.25rem;
+}
+
+@media (min-width: 640px) {
+    .app-type-display { font-size: var(--text-3xl); } /* 1.875rem · 30px */
+    .app-type-page { font-size: var(--text-2xl); }    /* 1.5rem · 24px */
+    .app-type-section { font-size: var(--text-lg); }  /* 1.125rem · 18px */
+    .app-type-lead { font-size: var(--text-base); }   /* 1rem · 16px */
+}
+
+/* 页面壳：统一响应式外边距（mobile-first，配合 Tailwind sm/md 断点）。 */
+.app-page {
+    width: 100%;
+    min-width: 0;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 主内容卡内边距：窄屏紧凑、宽屏舒展（可用 Tailwind p-4 sm:p-6 或本类）。 */
+.app-card-pad {
+    padding: var(--space-lg);
+}
+@media (min-width: 640px) {
+    .app-card-pad {
+        padding: var(--space-xl);
+    }
+}
+
+/* 规则卡片列表：替代宽表，PC/移动端都整洁。 */
+.app-rule-card {
+    border: 1px solid hsl(var(--b2, 220 14% 96%));
+    border-radius: var(--radius-md);
+    background: hsl(var(--b1, 0 0% 100%) / 0.72);
+    padding: var(--space-md);
+    min-width: 0;
+}
+@media (min-width: 640px) {
+    .app-rule-card {
+        padding: var(--space-lg);
+    }
+}
+.app-rule-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+.app-rule-card__title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    min-width: 0;
+    word-break: break-word;
+}
+.app-rule-card__meta {
+    margin-top: var(--space-sm);
+    display: grid;
+    gap: 0.375rem;
+    font-size: var(--text-xs);
+    color: hsl(var(--bc, 221 39% 11%) / 0.65);
+}
+@media (min-width: 768px) {
+    .app-rule-card__meta {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+        gap: var(--space-sm) var(--space-lg);
+        font-size: var(--text-sm);
+    }
+}
+.app-rule-card__meta dt {
+    font-weight: 500;
+    color: hsl(var(--bc, 221 39% 11%) / 0.55);
+}
+.app-rule-card__meta dd {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.app-rule-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: 1px solid hsl(var(--b2, 220 14% 96%));
+}
+@media (max-width: 639px) {
+    .app-rule-card__actions .btn {
+        flex: 1 1 calc(50% - var(--space-sm));
+        justify-content: center;
+        min-height: 2.25rem;
+    }
+}
+
+/* 顶栏品牌名：窄屏截断，避免挤掉导航按钮。 */
+.app-topnav-brand-text {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@media (min-width: 640px) {
+    .app-topnav-brand-text {
+        max-width: none;
+    }
+}
+
+/* 应用卡片操作区：窄屏改为双列网格，保证触控目标与换行不乱。 */
+.app-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+}
+@media (max-width: 639px) {
+    .app-row-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+    }
+    .app-row-actions > .app-row-toggle {
+        grid-column: 1 / -1;
+    }
+    .app-row-actions > .btn,
+    .app-row-actions > a.btn {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+    }
+    .app-row-actions > .app-row-delete {
+        grid-column: 1 / -1;
+    }
+}
+
+/* 设置行：左侧说明 + 右侧控件，窄屏纵向堆叠。 */
+.app-setting-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+}
+@media (min-width: 640px) {
+    .app-setting-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+    }
+    .app-setting-row > .app-setting-actions {
+        flex-shrink: 0;
+    }
+}
+
+/* 信息横幅内链接继承高对比度 info-content，避免 primary 洋红叠在蓝底上。 */
+.app-link-on-info {
+    color: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.16em;
+}
+.app-link-on-info:hover { opacity: 0.84; }
+
+/* 后端错误可能包含很长的 hint/IP；状态横幅必须内部换行，不能撑宽整页。 */
+#status,
+#status .alert,
+#status .alert > * {
+    min-width: 0;
+    max-width: 100%;
+}
+#status .alert > * {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* API 文档的长表格/代码只在自身容器内滚动，不得撑宽整个页面。 */
+.api-docs-card,
+.api-docs-card section,
+.api-docs-card .overflow-x-auto,
+.api-docs-card .bg-base-100 {
+    min-width: 0;
+    max-width: 100%;
+}
+.api-docs-card pre {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.api-docs-card code { overflow-wrap: anywhere; }
+
+/* CSP 收紧后的 Modal：全部视觉样式由同源 CSS 提供，不再写 element.style。 */
+body.app-modal-open { overflow: hidden; }
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: max(1rem, env(safe-area-inset-top, 0px))
+             max(1rem, env(safe-area-inset-right, 0px))
+             max(1rem, env(safe-area-inset-bottom, 0px))
+             max(1rem, env(safe-area-inset-left, 0px));
+    background: rgba(0, 0, 0, 0.55);
+    overscroll-behavior: contain;
+    touch-action: manipulation;
+}
+.app-modal-dialog {
+    width: 100%;
+    max-width: 32rem;
+    max-height: min(90dvh, 40rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    background: #fff;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.22);
+}
+.app-modal-title {
+    margin-bottom: 0.75rem;
+    font-size: var(--text-lg); /* 1.125rem */
+    font-weight: 700;
+    line-height: var(--leading-tight);
+}
+.app-modal-body {
+    margin-bottom: 1.25rem;
+    color: #374151;
+    font-size: var(--text-sm); /* 0.875rem · 移动端仍可读 */
+    line-height: var(--leading-body);
+    white-space: pre-line;
+}
+@media (min-width: 640px) {
+    .app-modal-body {
+        font-size: 0.9375rem; /* 15px → 0.9375rem */
+    }
+}
+.app-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* CSP 收紧后的 Toast。 */
+.app-toast-container {
+    position: fixed;
+    top: max(1rem, env(safe-area-inset-top, 0px));
+    left: 50%;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(90vw, 28rem);
+    max-width: calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+.app-toast {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: min(90vw, 28rem);
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    line-height: var(--leading-body);
+    opacity: 0;
+    pointer-events: auto;
+    transform: translateY(-10px);
+    transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+.app-toast--success { color: #fff; background: #15803d; }
+.app-toast--error { color: #fff; background: #b91c1c; }
+.app-toast--warn { color: #fff; background: #a84b08; }
+.app-toast--info { color: #fff; background: #0369a1; }
+.app-toast--visible { opacity: 1; transform: translateY(0); }
+.app-toast--exit {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-in);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 图标尺寸令牌（§4 consistent-icon-sizing，消除 inline style 混用）
+ * 用法：<i data-lucide="..." class="icon-sm"></i>
+ * ────────────────────────────────────────────────────────────────────── */
+.icon-xs { width: 0.75rem; height: 0.75rem; }   /* 12px */
+.icon-sm { width: 1rem; height: 1rem; }         /* 16px */
+.icon-md { width: 1.25rem; height: 1.25rem; }   /* 20px */
+.icon-lg { width: 1.5rem; height: 1.5rem; }     /* 24px */
+.icon-xl { width: 2rem; height: 2rem; }         /* 32px */
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 交互反馈（§7 scale-feedback / state-transition，仅 transform 不触发布局）
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* 按钮按压微缩反馈：所有 .btn 在 active 时轻微缩小（§7 scale-feedback）。 */
+.btn {
+    transition: transform var(--duration-fast) var(--ease-out),
+                background-color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+}
+.btn:active:not(:disabled):not(.btn-disabled) {
+    transform: scale(0.97);
+}
+
+/* 可交互卡片 hover 抬升（应用卡片、规则行）。
+   用法：在 <article>/<tr> 上加 .card-hover，配合已存在的 transition-shadow。 */
+.card-hover {
+    transition: box-shadow var(--duration-base) var(--ease-out),
+                transform var(--duration-base) var(--ease-out),
+                border-color var(--duration-base) var(--ease-out);
+}
+.card-hover:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 应用主状态徽标：颜色 + 文字 + 图标三重表达（§1 color-not-only / §4 state-clarity）
+ * ────────────────────────────────────────────────────────────────────── */
+.app-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 0.125rem var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1.25rem;
+    white-space: nowrap;
+}
+.app-badge--draft { background: #fef3c7; color: var(--app-status-draft); }
+.app-badge--active { background: #dcfce7; color: var(--app-status-active); }
+.app-badge--paused { background: #fee2e2; color: var(--app-status-paused); }
+.app-badge--warn {
+    background: #fef3c7;
+    color: var(--app-warn-duplicate);
+    border: 1px dashed var(--app-warn-duplicate);
+}
+
+/* 重复身份告警（独立于主状态）。 */
+.app-warn-duplicate {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--app-warn-duplicate);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 焦点与表单（§1 focus-states / §8 focus-management）
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* 统一可见焦点：键盘操作时显式聚焦环，鼠标点击不干扰。 */
+:focus-visible {
+    outline: none;
+    box-shadow: var(--app-focus-ring);
+}
+
+/* 输入框聚焦态：border-color 平滑过渡到 primary（garden 绿）。 */
+.input:focus,
+.textarea:focus,
+.select:focus {
+    transition: border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 导航（§9 nav-state-active / destructive-nav-separation）
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* 当前导航项：底部指示条 + 背景高亮（不只靠颜色）。 */
+.app-nav-link {
+    position: relative;
+    transition: background-color var(--duration-fast) var(--ease-out);
+}
+.app-nav-link[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -2px;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 2px;
+    border-radius: var(--radius-full);
+    background: currentColor;
+    opacity: 0.7;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 加载与高亮
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* 骨架屏：加载中占位（§3 progressive-loading / §7 loading-states）。 */
+.app-skeleton {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+    background-size: 400% 100%;
+    animation: app-skeleton-shimmer 1.4s ease infinite;
+    border-radius: var(--radius-md);
+}
+@keyframes app-skeleton-shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+
+/* 新建成功后高亮行（?highlight=<code>），高亮不超过一次会话。 */
+.app-row-highlight {
+    animation: app-row-flash 2.5s ease-out 1;
+}
+@keyframes app-row-flash {
+    0% { background-color: rgba(22, 163, 74, 0.18); }
+    100% { background-color: transparent; }
+}
+
+/* 状态提示淡入（api_code 可用性结果等，§7 state-transition）。 */
+.app-fade-in {
+    animation: app-fade-in var(--duration-base) var(--ease-out);
+}
+@keyframes app-fade-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 移动端触控目标（§2 touch-target-size，btn-xs 在窄屏扩大点击区）
+ * ────────────────────────────────────────────────────────────────────── */
+/* Tailwind 断点对齐：sm=640 / md=768 / lg=1024（mobile-first 辅以 max-width 兜底）。 */
+@media (max-width: 767px) {
+    /* btn-xs/btn-sm 默认高度偏小（24-32px），移动端扩大到 ≥36px 触控友好。 */
+    .btn-xs,
+    .btn-sm {
+        min-height: 2.25rem;   /* 36px */
+    }
+
+    /* 输入控件触控高度 + 16px 字号，避免 iOS 聚焦自动放大。 */
+    .input,
+    .select,
+    .textarea {
+        min-height: 2.75rem;   /* 44px */
+        font-size: 1rem;       /* 16px · rem */
+    }
+    .input-sm,
+    .select-sm {
+        min-height: 2.5rem;    /* 40px */
+        font-size: 1rem;
+    }
+
+    /* 模态在窄屏占满可用宽度，留出安全边距。 */
+    .app-modal-dialog {
+        max-width: min(32rem, calc(100vw - 2rem));
+        padding: 1.25rem;
+    }
+    .app-modal-actions {
+        flex-wrap: wrap;
+    }
+    .app-modal-actions .btn {
+        min-height: 2.5rem;
+    }
+
+    /* Grid 子项和 join 输入允许收缩；横向滚动仅保留在规则表容器内部。 */
+    #workspace,
+    #workspace > div,
+    #rule-form,
+    #rules-list,
+    #rules-list > table {
+        min-width: 0;
+        max-width: 100%;
+    }
+    #rule-form .join { max-width: 100%; }
+    #rule-form .join > span { padding-inline: 0.5rem; }
+
+    /* 固定背景在部分移动浏览器上造成抖动，窄屏改 scroll。 */
+    body {
+        background-attachment: scroll;
+    }
+}
+
+/* API 文档：超窄屏略收标题，仍保持 rem 与语义类一致。 */
+@media (max-width: 479px) {
+    .api-docs-card .app-type-display {
+        font-size: var(--text-xl);
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * 尊重用户减少动效偏好（§1 reduced-motion，全局禁用动画/过渡）
+ * ────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .app-skeleton,
+    .app-row-highlight,
+    .app-fade-in { animation: none; }
+    * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

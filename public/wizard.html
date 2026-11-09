@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="qywx">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e0f2fe">
+    <title>新建应用 · 企业微信通知服务</title>
+    <link rel="icon" href="/public/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/public/app.css">
+    <link rel="stylesheet" href="/public/styles.css">
+    <script defer src="/public/vendor/lucide.min.js"></script>
+</head>
+<body class="app-safe-pad">
+    <a href="#main-content" class="app-skip-link">跳到主内容</a>
+    <div class="app-page w-full max-w-2xl min-w-0 mx-auto my-2 sm:my-4">
+        <div id="app-topnav" data-active="overview" class="glass-card p-3 sm:p-4 mb-3 sm:mb-4"></div>
+
+        <main id="main-content" class="glass-card p-4 sm:p-6 min-w-0" tabindex="-1">
+            <h1 class="app-type-page text-primary flex items-center gap-2 mb-2">
+                <i data-lucide="plus-circle" class="icon-lg flex-shrink-0" aria-hidden="true"></i>
+                新建应用
+            </h1>
+            <p class="app-type-lead text-base-content/70 mb-4">
+                四步创建：回调 → 凭证 → 接收人 → 确认。CorpID 创建后锁定，更换企业需新建。
+            </p>
+
+            <!-- 步骤进度（§5.4 四步）：默认纵向，lg 横向 -->
+            <ul class="steps steps-vertical lg:steps-horizontal w-full mb-4 sm:mb-6 text-sm sm:text-base">
+                <li class="step step-primary" id="step-indicator-1">企业与回调</li>
+                <li class="step" id="step-indicator-2">凭证</li>
+                <li class="step" id="step-indicator-3">接收人</li>
+                <li class="step" id="step-indicator-4">确认</li>
+            </ul>
+
+            <!-- 第一步：企业与回调 -->
+            <div id="step1">
+                <div class="alert alert-warning mb-4 text-sm">
+                    <i data-lucide="alert-triangle" class="icon-md"></i>
+                    <span>同一企业只能有一个待完善草稿。若已存在草稿，会提示继续配置或删除后重建。</span>
+                </div>
+                <form id="callbackForm" class="space-y-4">
+                    <div class="form-control">
+                        <label for="cb-corpid" class="label font-medium">CorpID（企业 ID）</label>
+                        <input id="cb-corpid" type="text" name="corpid" class="input input-bordered w-full" required placeholder="请输入企业微信 CorpID…" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="form-control">
+                        <label for="cb-token" class="label font-medium">回调 Token</label>
+                        <input id="cb-token" type="text" name="callback_token" class="input input-bordered w-full" placeholder="企业微信后台随机生成…" required autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="form-control">
+                        <label for="cb-aeskey" class="label font-medium">EncodingAESKey</label>
+                        <input id="cb-aeskey" type="text" name="encoding_aes_key" class="input input-bordered w-full" placeholder="43 位字母数字字符…" required autocomplete="off" spellcheck="false">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full gap-1">
+                        <i data-lucide="link" class="icon-md"></i> 生成回调 URL 并继续
+                    </button>
+                </form>
+                <div id="callbackResult" class="hidden mt-4"></div>
+            </div>
+
+            <!-- 第二步：应用信息与凭证 -->
+            <div id="step2" class="hidden">
+                <div class="alert alert-info mb-4 text-sm">
+                    <i data-lucide="info" class="icon-md"></i>
+                    <span>请先在企业微信后台配置回调 URL 与 IP 白名单，再填写凭证并验证。</span>
+                </div>
+                <form id="configForm" class="space-y-4">
+                    <div class="form-control">
+                        <label for="cf-desc" class="label font-medium">应用名称/备注（可选）</label>
+                        <input id="cf-desc" type="text" name="description" class="input input-bordered w-full" placeholder="例如：服务器告警推送…" autocomplete="off">
+                    </div>
+                    <div class="form-control">
+                        <label for="cf-corpsecret" class="label font-medium">CorpSecret</label>
+                        <input id="cf-corpsecret" type="password" name="corpsecret" class="input input-bordered w-full" required placeholder="请输入 CorpSecret…" autocomplete="new-password" spellcheck="false">
+                    </div>
+                    <div class="form-control">
+                        <label for="cf-agentid" class="label font-medium">AgentID</label>
+                        <input id="cf-agentid" type="number" name="agentid" inputmode="numeric" class="input input-bordered w-full" required placeholder="例如 1000002…" autocomplete="off">
+                    </div>
+                    <button type="button" id="validateBtn" class="btn btn-outline w-full gap-1">
+                        <i data-lucide="shield-check" class="icon-md"></i> 验证凭证
+                    </button>
+                </form>
+                <div class="flex flex-col sm:flex-row gap-2 mt-4">
+                    <button type="button" id="back-to-1" class="btn btn-ghost gap-1 w-full sm:w-auto">
+                        <i data-lucide="arrow-left" class="icon-sm"></i> 上一步
+                    </button>
+                </div>
+            </div>
+
+            <!-- 第三步：默认接收成员 -->
+            <div id="step3" class="hidden">
+                <div class="alert alert-info mb-4 text-sm">
+                    <i data-lucide="users" class="icon-md"></i>
+                    <span>选择该应用的默认接收成员（仅成员，部门/标签由规则承载）。</span>
+                </div>
+                <div id="recipient-picker-mount"></div>
+                <div class="flex flex-col-reverse sm:flex-row gap-2 mt-4">
+                    <button type="button" id="back-to-2" class="btn btn-ghost gap-1 w-full sm:w-auto">
+                        <i data-lucide="arrow-left" class="icon-sm"></i> 上一步
+                    </button>
+                    <button type="button" id="to-step-4" class="btn btn-primary gap-1 w-full sm:w-auto sm:ml-auto">
+                        下一步 <i data-lucide="arrow-right" class="icon-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 第四步：确认与完成 -->
+            <div id="step4" class="hidden">
+                <div class="alert alert-warning mb-4 text-sm">
+                    <i data-lucide="alert-triangle" class="icon-md"></i>
+                    <span>提交后将调用企业微信验证并写入。AgentID 或 CorpSecret 变化会重新验证凭证。</span>
+                </div>
+                <div id="summary" class="bg-base-100 rounded-lg p-4 border border-base-200 mb-4 text-sm space-y-1"></div>
+                <div class="flex flex-col-reverse sm:flex-row gap-2">
+                    <button type="button" id="back-to-3" class="btn btn-ghost gap-1 w-full sm:w-auto">
+                        <i data-lucide="arrow-left" class="icon-sm"></i> 上一步
+                    </button>
+                    <button type="button" id="complete-btn" class="btn btn-success btn-lg flex-1 gap-1 w-full">
+                        <i data-lucide="check" class="icon-md"></i> 完成配置
+                    </button>
+                </div>
+            </div>
+
+            <div id="result" class="mt-6"></div>
+        </main>
+    </div>
+
+    <script src="/public/components/toast.js"></script>
+    <script src="/public/components/modal.js"></script>
+    <script src="/public/components/recipient-picker.js"></script>
+    <script src="/public/http.js"></script>
+    <script src="/public/topnav.js"></script>
+    <script src="/public/wizard.js"></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="qywx">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e0f2fe">
+    <title>编辑应用 · 企业微信通知服务</title>
+    <link rel="icon" href="/public/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/public/app.css">
+    <link rel="stylesheet" href="/public/styles.css">
+    <script defer src="/public/vendor/lucide.min.js"></script>
+</head>
+<body class="app-safe-pad">
+    <a href="#main-content" class="app-skip-link">跳到主内容</a>
+    <div class="app-page w-full max-w-3xl min-w-0 mx-auto my-2 sm:my-4">
+        <div id="app-topnav" data-active="overview" class="glass-card p-3 sm:p-4 mb-3 sm:mb-4"></div>
+
+        <main id="main-content" class="glass-card p-4 sm:p-6 min-w-0" tabindex="-1">
+            <header class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                <h1 class="app-type-page flex items-center gap-2 min-w-0">
+                    <i data-lucide="pencil" class="icon-lg text-primary flex-shrink-0" aria-hidden="true"></i>
+                    编辑应用
+                </h1>
+                <a href="/" class="btn btn-sm btn-ghost gap-1.5">
+                    <i data-lucide="arrow-left" class="icon-sm" aria-hidden="true"></i> 返回总览
+                </a>
+            </header>
+
+            <!-- 暂停横幅（paused 仍可编辑/管理规则/安全设置） -->
+            <div id="paused-banner" class="hidden alert alert-warning mb-4 text-sm">
+                <i data-lucide="circle-pause" class="icon-md"></i>
+                <span>该应用已暂停发送。暂停只影响发送，编辑/规则/安全设置仍可使用，修复后可在总览恢复。</span>
+            </div>
+
+            <!-- 重复身份告警 -->
+            <div id="duplicate-banner" class="hidden app-warn-duplicate mb-4 text-sm">
+                <i data-lucide="copy-x" class="icon-sm"></i>
+                <span>检测到重复应用（同企业同 AgentID）。该告警不阻止编辑/暂停/删除。</span>
+            </div>
+
+            <!-- 加载/错误状态 -->
+            <div id="loading-state" class="space-y-3">
+                <div class="app-skeleton h-8 w-full"></div>
+                <div class="app-skeleton h-32 w-full"></div>
+            </div>
+            <div id="error-state" class="hidden alert alert-error">
+                <i data-lucide="alert-circle" class="icon-md"></i>
+                <span id="error-message">加载失败</span>
+                <a href="/" class="btn btn-sm btn-ghost">返回总览</a>
+            </div>
+
+            <!-- 编辑表单（服务端 capabilities.can_edit=false 时禁用） -->
+            <div id="edit-form" class="hidden space-y-6">
+                <input type="hidden" id="app-code">
+                <input type="hidden" id="app-version">
+
+                <!-- 1. 基本信息 -->
+                <section class="border border-base-200 rounded-lg p-4">
+                    <h2 class="app-type-section mb-3 flex items-center gap-2"><i data-lucide="info" class="icon-md text-primary"></i> 基本信息</h2>
+                    <div class="form-control mb-3">
+                        <label for="f-description" class="label font-medium">应用名称/备注</label>
+                        <input id="f-description" type="text" class="input input-bordered w-full" placeholder="例如：服务器告警推送…" autocomplete="off">
+                    </div>
+                    <div class="form-control">
+                        <label for="f-agentid" class="label font-medium">AgentID（变更会重新验证凭证）</label>
+                        <input id="f-agentid" type="number" inputmode="numeric" class="input input-bordered w-full" placeholder="例如 1000002…" autocomplete="off">
+                    </div>
+                </section>
+
+                <!-- 2. 企业凭证 -->
+                <section class="border border-base-200 rounded-lg p-4">
+                    <h2 class="app-type-section mb-3 flex items-center gap-2"><i data-lucide="key" class="icon-md text-primary"></i> 企业凭证</h2>
+                    <div class="form-control mb-3">
+                        <label for="f-corpid" class="label font-medium">CorpID（不可修改，更换企业请新建应用）</label>
+                        <input id="f-corpid" type="text" class="input input-bordered w-full opacity-60" readonly>
+                    </div>
+                    <div class="form-control">
+                        <label for="f-corpsecret" class="label font-medium">CorpSecret（留空表示不修改）</label>
+                        <input id="f-corpsecret" type="password" class="input input-bordered w-full" placeholder="留空保持不变…" autocomplete="new-password" spellcheck="false">
+                        <div class="label">
+                            <span class="label-text-alt text-base-content/60">修改 CorpSecret 或 AgentID 会在保存时重新验证企业微信凭证。</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. 回调配置 -->
+                <section class="border border-base-200 rounded-lg p-4">
+                    <h2 class="app-type-section mb-3 flex items-center gap-2"><i data-lucide="webhook" class="icon-md text-primary"></i> 回调配置</h2>
+                    <label class="flex items-center gap-2 cursor-pointer mb-3">
+                        <input id="f-callback-enabled" type="checkbox" class="toggle toggle-primary toggle-sm">
+                        <span class="text-sm">启用回调</span>
+                    </label>
+                    <div class="form-control mb-3">
+                        <label for="f-callback-token" class="label font-medium">回调 Token（留空不变）</label>
+                        <input id="f-callback-token" type="password" class="input input-bordered w-full" placeholder="留空保持不变…" autocomplete="new-password" spellcheck="false">
+                    </div>
+                    <div class="form-control">
+                        <label for="f-aeskey" class="label font-medium">EncodingAESKey（留空不变）</label>
+                        <input id="f-aeskey" type="password" class="input input-bordered w-full" placeholder="43 位字母数字；留空不变…" autocomplete="new-password" spellcheck="false">
+                    </div>
+                    <div id="callback-url-display" class="text-xs text-base-content/60 mt-2 break-all"></div>
+                </section>
+
+                <!-- 4. 默认接收人 -->
+                <section class="border border-base-200 rounded-lg p-4">
+                    <h2 class="app-type-section mb-3 flex items-center gap-2"><i data-lucide="users" class="icon-md text-primary"></i> 默认接收成员</h2>
+                    <div class="mb-2">
+                        <button type="button" id="refresh-members-btn" class="btn btn-xs btn-outline gap-1">
+                            <i data-lucide="refresh-cw" class="icon-xs"></i> 刷新成员列表
+                        </button>
+                    </div>
+                    <div id="recipient-picker-mount"></div>
+                </section>
+
+                <!-- 5. 安全设置 -->
+                <section id="security-section" class="border border-base-200 rounded-lg p-4">
+                    <h2 class="app-type-section mb-3 flex items-center gap-2"><i data-lucide="shield-check" class="icon-md text-primary"></i> 安全设置</h2>
+
+                    <div class="app-setting-row mb-4">
+                        <div class="min-w-0">
+                            <div class="font-medium text-sm">允许应用 Code 直接发送</div>
+                            <div class="text-xs text-base-content/60">关闭后 /api/notify/:code 返回 403；规则 API 不受影响。</div>
+                        </div>
+                        <label class="app-setting-actions flex items-center gap-2 cursor-pointer">
+                            <input id="f-code-send-enabled" type="checkbox" class="toggle toggle-sm toggle-primary">
+                            <span id="code-send-status" class="text-xs text-base-content/70">—</span>
+                        </label>
+                    </div>
+
+                    <div class="divider my-2"></div>
+                    <div class="app-setting-row">
+                        <div class="min-w-0">
+                            <div class="font-medium text-sm">通知密钥（X-Notify-Key）</div>
+                            <div id="notify-key-status" class="text-xs text-base-content/60">未加载</div>
+                        </div>
+                        <div class="app-setting-actions flex flex-wrap gap-1">
+                            <button type="button" id="enable-notify-key-btn" class="btn btn-xs btn-primary hidden">启用</button>
+                            <button type="button" id="rotate-notify-key-btn" class="btn btn-xs btn-outline btn-warning hidden">轮换</button>
+                            <button type="button" id="revoke-notify-key-btn" class="btn btn-xs btn-outline btn-error hidden">撤销</button>
+                        </div>
+                    </div>
+                    <div id="notify-key-onetime" class="hidden mt-3"></div>
+                </section>
+
+                <!-- 保存按钮保持正常文档流，避免 sticky 底栏覆盖正在编辑的字段。 -->
+                <div class="flex items-center gap-2 mt-2 pt-4 border-t border-base-200">
+                    <button type="button" id="save-btn" class="btn btn-primary flex-1 gap-1.5">
+                        <i data-lucide="save" class="icon-md"></i> 保存修改
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/public/components/toast.js"></script>
+    <script src="/public/components/modal.js"></script>
+    <script src="/public/components/recipient-picker.js"></script>
+    <script src="/public/http.js"></script>
+    <script src="/public/frontend-helpers.js"></script>
+    <script src="/public/topnav.js"></script>
+    <script src="/public/edit.js"></script>
+</body>
+</html>

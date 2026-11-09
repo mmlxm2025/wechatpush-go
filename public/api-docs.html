@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="qywx">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e0f2fe">
+    <title>企业微信通知服务 - API文档</title>
+    <link rel="icon" href="/public/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/public/app.css">
+    <link rel="stylesheet" href="/public/styles.css">
+    <script defer src="/public/vendor/lucide.min.js"></script>
+</head>
+<body class="app-safe-pad flex flex-col items-center justify-center">
+    <a href="#main-content" class="app-skip-link">跳到主内容</a>
+    <main id="main-content" class="api-docs-card w-full max-w-4xl min-w-0 glass-card p-4 sm:p-6 md:p-8 my-4 sm:my-8" tabindex="-1">
+        <header class="mb-6 sm:mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <h1 class="app-type-display text-primary flex items-center gap-2 min-w-0">
+                    <i data-lucide="book-open" class="icon-xl flex-shrink-0" aria-hidden="true"></i>
+                    企业微信通知服务 API文档
+                </h1>
+                <a href="/" class="btn btn-outline btn-sm gap-1">
+                    <i data-lucide="arrow-left" class="icon-sm" aria-hidden="true"></i>
+                    返回首页
+                </a>
+            </div>
+            <p class="app-type-lead text-base-content/70 mt-2">详细的API使用说明文档，帮助您快速集成企业微信消息推送功能</p>
+        </header>
+
+        <div class="space-y-6 sm:space-y-8">
+            <!-- API概述 -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="info" class="icon-md flex-shrink-0"></i>
+                    API概述
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm">
+                    <p class="mb-4">企业微信通知服务提供了简单易用的HTTP API，用于向企业微信应用发送消息通知。通过配置您的企业微信应用信息，系统会生成一个唯一的API地址，您可以通过该地址发送消息。</p>
+                    <div class="alert alert-info">
+                        <i data-lucide="lightbulb" class="h-5 w-5"></i>
+                        <span>使用前，您需要先在首页创建配置并获取唯一的API地址。</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 认证与安全 -->
+            <section id="auth">
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="shield" class="h-6 w-6"></i>
+                    认证与安全
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm space-y-4">
+                    <p>通知发送 API 支持两级安全策略，<strong>通知密钥默认关闭</strong>，可按需在管理后台「配置详情 → 通知密钥」中启用：</p>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra w-full">
+                            <thead>
+                                <tr>
+                                    <th>模式</th>
+                                    <th>请求头</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-medium">默认（无鉴权）</td>
+                                    <td class="font-mono text-xs">无需额外头</td>
+                                    <td>仅凭 <code>/api/notify/{code}</code> 即可发送。适合内网/受信环境快速接入。</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">通知密钥（可选）</td>
+                                    <td class="font-mono text-xs">X-Notify-Key</td>
+                                    <td>启用后必须携带正确的 <code>notify_key</code>，错误或缺失返回 401。密钥在配置详情页生成，<strong>仅显示一次</strong>，可随时轮换/撤销。</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">HMAC 签名（可选增强）</td>
+                                    <td class="font-mono text-xs">X-Notify-Key +<br>X-Notify-Timestamp +<br>X-Notify-Nonce +<br>X-Notify-Signature</td>
+                                    <td>在通知密钥基础上增加签名校验，拒绝重放与篡改。详见下方 <a href="#hmac" class="link link-primary">HMAC 签名模式</a>。</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-info">
+                        <i data-lucide="info" class="h-5 w-5"></i>
+                        <div class="text-sm">通知密钥与回调地址使用的 Code 相互分离，互不影响。规则（Rule）API 与其所属配置共用同一把 <code>notify_key</code>。</div>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i data-lucide="alert-triangle" class="h-5 w-5"></i>
+                        <span>管理后台登录凭证改由 HttpOnly Cookie 携带，不再出现在 URL 或浏览器脚本可读的存储中。通知密钥仅在生成时显示一次，请妥善保存；遗失或泄漏后可随时轮换。</span>
+                    </div>
+
+                    <!-- HMAC 签名模式子节 -->
+                    <div id="hmac" class="pt-2">
+                        <h3 class="font-medium text-lg mb-3 flex items-center gap-2">
+                            <i data-lucide="fingerprint" class="h-5 w-5"></i>
+                            HMAC 签名模式（可选增强）
+                        </h3>
+                        <p class="mb-3 text-sm">启用通知密钥后，可额外提供三个签名头启用 HMAC-SHA256 校验，防止请求被重放或篡改。一旦提供任意一个签名头，三个头必须同时提供且校验通过。</p>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="font-medium text-sm mb-1">签名头说明</div>
+                                <div class="overflow-x-auto">
+                                    <table class="table table-zebra w-full text-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>请求头</th>
+                                                <th>说明</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="font-mono">X-Notify-Timestamp</td>
+                                                <td>Unix 秒级时间戳，与服务端相差不得超过 ±300 秒，否则返回 401。</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-mono">X-Notify-Nonce</td>
+                                                <td>随机串（建议 16+ 位），服务端在 10 分钟内拒绝相同 nonce，防止重放。</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-mono">X-Notify-Signature</td>
+                                                <td>HMAC-SHA256 签名的十六进制串（小写）。</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm mb-1">待签字符串（用 <code>\n</code> 连接 5 段）</div>
+                                <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">{HTTP方法}
+{请求路径，如 /api/notify/your-code}
+{时间戳，与 X-Notify-Timestamp 一致}
+{nonce，与 X-Notify-Nonce 一致}
+{请求体的 SHA-256 十六进制，即 sha256(rawBody)}</pre>
+                                </div>
+                                <p class="text-xs text-base-content/70 mt-1">注意：第 5 段是对<strong>客户端实际发送的原始请求体字节</strong>做 SHA-256，不要对 JSON 重新序列化（空白/换行不同会导致签名失败）。</p>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm mb-1">签名计算（伪代码）</div>
+                                <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">secret        = hex2bytes(notify_key)        # notify_key 的十六进制字节作为 HMAC 密钥
+bodyHash      = sha256(rawBody).hex()        # 请求体哈希
+message       = [method, path, timestamp, nonce, bodyHash].join("\n")
+signature     = hmac_sha256(secret, message).hex()</pre>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm mb-1">完整 curl 范例（含通知密钥 + HMAC 四头）</div>
+                                <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">#!/bin/bash
+CODE="your-code-here"
+KEY="你的 notify_key"
+BODY='{"title":"服务器告警","content":"CPU使用率超过90%"}'
+
+TS=$(date +%s)
+NONCE=$(head -c 16 /dev/urandom | xxd -p)
+BODY_HASH=$(printf '%s' "$BODY" | sha256sum | awk '{print $1}')
+MSG=$(printf 'POST\n/api/notify/'"$CODE"'\n'"$TS"'\n'"$NONCE"'\n'"$BODY_HASH")
+SIG=$(printf '%s' "$MSG" | openssl dgst -sha256 -mac HMAC -macopt hexkey:"$KEY" | awk '{print $NF}')
+
+curl -X POST "https://your-server.com/api/notify/$CODE" \
+  -H "Content-Type: application/json" \
+  -H "X-Notify-Key: $KEY" \
+  -H "X-Notify-Timestamp: $TS" \
+  -H "X-Notify-Nonce: $NONCE" \
+  -H "X-Notify-Signature: $SIG" \
+  -d "$BODY"</pre>
+                                </div>
+                                <p class="text-xs text-base-content/70 mt-1">未启用通知密钥时，可省略以上全部四个 <code>X-Notify-*</code> 头，直接发送即可。</p>
+                                <p class="text-xs text-base-content/70 mt-1">HMAC 签名内容包含请求路径（如 <code>/api/notify/your-code</code>）。若修改了规则的 <code>api_code</code>，调用方必须按<strong>新路径</strong>重新计算签名，否则旧路径签名会失效（旧地址本身也会立即 404）。规则仍继承所属应用的通知密钥，改号不改变密钥。</p>
+                                <div class="alert alert-warning mt-2">
+                                    <i data-lucide="alert-triangle" class="h-5 w-5"></i>
+                                    <div class="text-xs">
+                                        <div class="font-medium">反向代理注意事项</div>
+                                        <div>HMAC 签名依赖服务端收到的<strong>原始请求体字节</strong>。若服务部署在 Nginx/OpenResty 等反代之后，且反代对请求体做了重编码（如改用 chunked transfer、重新序列化、追加/裁剪空白），会导致服务端 <code>sha256(rawBody)</code> 与客户端签名时的 body 哈希不一致，返回 401「签名校验失败」。<strong>排查方法</strong>：直连容器端口（绕过反代）若签名通过，即为反代改写 body 所致。<strong>解决</strong>：配置反代透传原始请求体（Nginx 用 <code>proxy_pass</code> + <code>proxy_set_header</code>，避免 <code>client_body_buffer</code> 重写；确保 <code>proxy_request_buffering off</code> 或保持原始 Content-Length）。通知密钥（仅 <code>X-Notify-Key</code>，不带签名）不受此影响。</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 发送消息API -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="send" class="h-6 w-6"></i>
+                    发送消息API
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm space-y-6">
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">请求地址</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+                            <code class="text-sm">POST /api/notify/{your_code}</code>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-1">其中 {your_code} 是您创建配置时获得的唯一Code</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">请求头</h3>
+                        <div class="bg-base-200 p-3 rounded-md space-y-1">
+                            <code class="text-sm block">Content-Type: application/json</code>
+                            <code class="text-sm block">X-Notify-Key: &lt;notify_key&gt;  <span class="text-base-content/60"># 启用通知密钥后必填，未启用可省略</span></code>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-1">未启用通知密钥时，仅需 <code>Content-Type</code>。如需 HMAC 签名增强，另见 <a href="#hmac" class="link link-primary">HMAC 签名模式</a>。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">请求参数</h3>
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th>参数名</th>
+                                        <th>类型</th>
+                                        <th>必填</th>
+                                        <th>说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-mono">msgType</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>消息类型，默认: text。可选值: text, markdown, image, file, textcard, news</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">title</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>消息标题。文本/文本卡片/图文消息必填。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">content</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>消息内容。文本/Markdown/文本卡片消息必填。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">mediaId</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>媒体文件ID。图片/文件消息必填，需要通过素材上传接口获取。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">url</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>点击消息后跳转的链接。文本卡片/图文消息必填。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">btntxt</td>
+                                        <td>String</td>
+                                        <td>否</td>
+                                        <td>按钮文字。文本卡片消息可选，默认为"详情"。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">articles</td>
+                                        <td>Array</td>
+                                        <td>否</td>
+                                        <td>图文消息数组。图文消息必填，每项包含title,description,url,picurl。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">safe</td>
+                                        <td>Int</td>
+                                        <td>否</td>
+                                        <td>是否保密消息，0否(默认)，1是。图片/文件/文本卡片/图文消息支持。</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">请求示例</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm"># 未启用通知密钥 —— 最简调用
+curl -X POST "https://your-server.example/api/notify/your-code-here" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "服务器告警",
+  "content": "CPU使用率超过90%，请及时处理！\n\n**详细信息**：\n- 服务器：web-server-01\n- 时间：2023-09-15 14:30:45\n- 当前负载：95%"
+}'</pre>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-1">启用通知密钥后，请在上方追加 <code>-H "X-Notify-Key: 你的密钥"</code>；完整四头签名范例见 <a href="#hmac" class="link link-primary">HMAC 签名模式</a>。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">返回示例</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">{
+  "message": "发送成功",
+  "response": {
+    "errcode": 0,
+    "errmsg": "ok",
+    "msgid": "MSGID1234567890"
+  }
+}</pre>
+                        </div>
+                    </div>
+
+                    <!-- 消息类型示例 -->
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">不同消息类型示例</h3>
+                        
+                        <!-- 文本消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" checked />
+                            <div class="collapse-title font-medium">文本消息 (text)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "text",
+  "title": "告警通知",
+  "content": "服务器 CPU 使用率过高，请及时处理！"
+}</pre>
+                            </div>
+                        </div>
+
+                        <!-- Markdown 消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" />
+                            <div class="collapse-title font-medium">Markdown 消息 (markdown)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "markdown",
+  "title": "告警通知",
+  "content": "您的会议室已经预定成功\n> 会议室：**3楼301**\n> 时间：**14:00-16:00**\n> 组织者：@张三\n\n请准时参加会议。"
+}</pre>
+                            </div>
+                        </div>
+
+                        <!-- 文本卡片消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" />
+                            <div class="collapse-title font-medium">文本卡片消息 (textcard)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "textcard",
+  "title": "领奖通知",
+  "content": "恭喜您获得精美礼品一份，请于本周五前到行政部领取。",
+  "url": "https://example.com/prize",
+  "btntxt": "查看详情"
+}</pre>
+                            </div>
+                        </div>
+
+                        <!-- 图文消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" />
+                            <div class="collapse-title font-medium">图文消息 (news)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "news",
+  "articles": [
+    {
+      "title": "公司年度旅游通知",
+      "description": "一年一度的公司旅游即将开始，欢迎大家积极报名参加！",
+      "url": "https://example.com/travel",
+      "picurl": "https://example.com/images/travel.jpg"
+    }
+  ]
+}</pre>
+                            </div>
+                        </div>
+
+                        <!-- 图片消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" />
+                            <div class="collapse-title font-medium">图片消息 (image)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "image",
+  "mediaId": "MEDIA_ID",
+  "safe": 0
+}</pre>
+                            </div>
+                        </div>
+
+                        <!-- 文件消息 -->
+                        <div class="collapse collapse-arrow bg-base-200 rounded-md mb-2">
+                            <input type="checkbox" />
+                            <div class="collapse-title font-medium">文件消息 (file)</div>
+                            <div class="collapse-content">
+<pre class="text-sm">{
+  "msgType": "file",
+  "mediaId": "MEDIA_ID",
+  "safe": 0
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">错误码说明</h3>
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th>HTTP状态码</th>
+                                        <th>说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>200</td>
+                                        <td>请求成功</td>
+                                    </tr>
+                                    <tr>
+                                        <td>400</td>
+                                        <td>参数错误，如缺少必填参数</td>
+                                    </tr>
+                                    <tr>
+                                        <td>404</td>
+                                        <td>配置不存在，请检查Code是否正确</td>
+                                    </tr>
+                                    <tr>
+                                        <td>500</td>
+                                        <td>服务器内部错误或企业微信API调用失败</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 接收规则 API -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="route" class="h-6 w-6"></i>
+                    接收规则 API
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm space-y-6">
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">管理规则</h3>
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th>接口</th>
+                                        <th>方法</th>
+                                        <th>说明</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-mono">/api/configurations</td>
+                                        <td>GET</td>
+                                        <td>获取可选择的基础配置 Code 列表，供规则页下拉选择</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/configuration/{code}/rules</td>
+                                        <td>GET</td>
+                                        <td>获取某个基础配置下的规则列表</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/configuration/{code}/rules</td>
+                                        <td>POST</td>
+                                        <td>创建规则并生成独立通知 API</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/rules/{id}</td>
+                                        <td>PUT</td>
+                                        <td>修改规则名称和接收范围</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/rules/{id}/regenerate</td>
+                                        <td>POST</td>
+                                        <td>重新生成规则 API，旧地址立即失效；旧编号会被保留，不能分配给其他规则</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/rule-api-codes/availability</td>
+                                        <td>GET</td>
+                                        <td>查询自定义编号是否可用（预检，不代替保存校验）</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-mono">/api/rules/{id}</td>
+                                        <td>DELETE</td>
+                                        <td>删除规则；编号会被保留，不能被新规则接管</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">配置列表响应</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">{
+  "configurations": [
+    {
+      "code": "abc123",
+      "agentid": 1000002,
+      "description": "生产告警",
+      "completed": true,
+      "created_at": "2026-06-26 12:00:00"
+    }
+  ]
+}</pre>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-2">规则配置页仅自动选择已完成的配置；未完成配置会显示在列表中，但需要先回到首页补全应用信息和接收人。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">规则请求体</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">{
+  "name": "运维值班",
+  "api_code": "ops-oncall",
+  "is_all": false,
+  "touser": ["zhangsan", "lisi"],
+  "toparty": "2|3",
+  "totag": "9",
+  "estimated_count": 2
+}</pre>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-2">当 <code>is_all</code> 为 true 时，系统会按企业微信官方规则发送 <code>touser="@all"</code>，并忽略 <code>touser/toparty/totag</code>。不创建规则时，原有 <code>/api/notify/{code}</code> 仍按基础配置发送。</p>
+                        <p class="text-sm text-base-content/70 mt-2"><code>api_code</code> 为可选的自定义通知编号（3～64 位小写字母、数字、<code>-</code>、<code>_</code>，首尾须为字母或数字）。创建时省略或留空则自动生成 UUID；编辑时省略表示不修改编号，显式空值会返回 <code>400 RULE_API_CODE_INVALID</code>。修改编号后旧地址 <code>/api/notify/{旧编号}</code> 立即失效，调用方需改用新地址。编号是路由标识，<strong>不是凭证</strong>——请勿当作密码使用。</p>
+                        <p class="text-sm text-base-content/70 mt-2">编辑规则改号成功时，响应额外包含 <code>"api_code_changed": true</code>。编号在规则、应用 Code 与退役编号构成的全局命名空间内唯一（大小写不敏感）；被占用或已被保留时返回 <code>409 RULE_API_CODE_CONFLICT</code>（<code>details.conflict_scope</code> 为 <code>rule</code>/<code>configuration</code>/<code>retired</code>，不带 <code>version</code>，不会与版本冲突混淆）。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">自定义通知 API</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">curl -X POST "https://your-server.example/api/notify/rule-api-code" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "告警通知",
+  "content": "磁盘使用率超过 90%"
+}'</pre>
+                        </div>
+                        <p class="text-sm text-base-content/70 mt-2">规则 API 与基础通知 API 的请求体一致。短时间内完全相同的消息会返回缓存结果并带有 <code>response.cached=true</code>；如需强制发送，可传 <code>"force": true</code>。</p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">缓存与限频</h3>
+                        <ul class="list-disc pl-5 text-sm text-base-content/80 space-y-1">
+                            <li><code>access_token</code> 继续按企业微信返回的 <code>expires_in</code> 缓存，并提前 5 分钟过期。</li>
+                            <li>规则/配置解析默认缓存 60 秒，成员列表默认缓存 5 分钟，成员刷新接口可用 <code>?refresh=1</code> 强制重拉。</li>
+                            <li>显式成员发送会做本地保护：每成员每分钟 30 次、每小时 1000 次；触发后返回 HTTP 429。</li>
+                            <li>企业微信返回 45009 等限频错误时，当前应用会进入短暂退避保护，后续请求返回 HTTP 429。</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 多应用管理 API（2026-07-04） -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="layout-grid" class="h-6 w-6"></i>
+                    应用管理 API（多应用）
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm space-y-4 text-sm">
+                    <div class="alert alert-info">
+                        <i data-lucide="info" class="h-5 w-5"></i>
+                        <div>一个应用 = <code>configurations</code> 的一行（企业 + AgentID + 凭证 + 默认接收人）。同一企业可有多个不同 AgentID 的应用，应用 Code 互不串用。</div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">应用总览与详情</h3>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><code>GET /api/configurations</code> —— 按企业返回应用列表，每行含 <code>lifecycle_status</code>（draft/active/paused）、<code>capabilities</code>、<code>warnings</code>、<code>version</code>、<code>recipient_count</code>、<code>rule_count</code>。不返回 CorpSecret / AESKey / 通知密钥哈希。</li>
+                            <li><code>GET /api/configuration/:code</code> —— 应用详情，复用统一序列化；新增 <code>corpsecret_configured</code>/<code>callback_token_configured</code>/<code>encoding_aes_key_configured</code>（仅表示是否配置，不返回明文）。</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">三层发送开关（优先级从高到低）</h3>
+                        <pre class="bg-base-200 p-3 rounded-md text-xs">配置 Code：app_enabled AND code_send_enabled AND notify_auth_ok
+规则 API ： app_enabled AND rule.enabled       AND notify_auth_ok</pre>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>应用仍是草稿：<code>409 APP_NOT_COMPLETED</code>。</li>
+                            <li>应用总开关关闭：<code>403 APP_DISABLED</code>（配置 Code 与全部规则 API 均被拒）。</li>
+                            <li>配置 Code 入口关闭：<code>403 DIRECT_SEND_DISABLED</code>；规则关闭：<code>403 RULE_DISABLED</code>。</li>
+                            <li>暂停只影响发送，编辑/规则/安全设置仍可使用。</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">应用聚合写操作（需 If-Match 版本）</h3>
+                        <p class="mb-2">列表/详情返回 <code>version</code>；写请求携带 <code>If-Match: &lt;version&gt;</code>。缺版本 <code>428 APP_VERSION_REQUIRED</code>；版本不匹配 <code>409 APP_VERSION_CONFLICT</code>（响应含最新 version）。成功响应含 <code>version</code>（或规则的 <code>app_version</code>），前端采用服务端值，不本地 <code>+1</code>。</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><code>PUT /api/configuration/:code</code> —— 局部更新（touched-field），空 CorpSecret/Token/AESKey 表示不变。<code>corpid</code> 不可改（<code>400 CORPID_IMMUTABLE</code>）；改 AgentID 按 <code>(corpid, agentid)</code> 判重（<code>409 APP_IDENTITY_CONFLICT</code>）。</li>
+                            <li><code>DELETE /api/configuration/:code</code> —— 事务级联删除应用及全部规则，返回 <code>{ configurations_deleted, rules_deleted }</code>。</li>
+                            <li><code>PUT /api/configuration/:code/app-enabled</code> —— 发送启用/暂停切换（严格布尔，草稿拒绝）。暂停只阻止发送，不影响编辑、规则与安全设置管理。</li>
+                            <li><code>PUT /api/configuration/:code/code-send</code> —— 应用 Code 直接发送开关（不影响规则）。</li>
+                            <li><code>POST/DELETE /api/configuration/:code/notify-key</code> —— 启用/轮换/撤销通知密钥（轮换返回一次性明文 <code>notify_key</code>）。</li>
+                            <li><code>POST /api/configuration/:code/rules</code>、<code>PUT/DELETE /api/rules/:id</code>、<code>POST /api/rules/:id/regenerate</code>、<code>PUT /api/rules/:id/enabled</code> —— 规则增删改/重生成/启停，与应用版本原子提交，成功返回 <code>app_version</code>。</li>
+                            <li><code>POST /api/generate-callback</code>（携带 <code>draft_code</code> 更新草稿时）与 <code>POST /api/complete-config</code> —— 草稿更新/完成同样需 <code>version</code>（请求体字段，区分缺失 428 / 非法 400 / 冲突 409）；新建草稿返回初始 <code>version=1</code>。</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">创建流程（草稿隔离）</h3>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><code>POST /api/generate-callback</code> —— 生成草稿与回调 URL。同企业已有草稿：<code>409 APP_DRAFT_EXISTS</code>（<code>details.existing_code</code>）。</li>
+                            <li><code>POST /api/complete-config</code> —— 完成草稿。已完成：<code>409 APP_ALREADY_COMPLETED</code>；身份冲突：<code>409 APP_IDENTITY_CONFLICT</code>。</li>
+                            <li>草稿不会被当成可发送应用；草稿发送返回 <code>409 APP_NOT_COMPLETED</code>。</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">稳定错误码</h3>
+                        <p class="mb-1">响应体 <code>{ error, code?, details? }</code>，前端按 <code>code</code> 分支，不匹配中文文案：</p>
+                        <div class="overflow-x-auto">
+                            <table class="table table-xs">
+                                <thead><tr><th>HTTP</th><th>code</th><th>场景</th></tr></thead>
+                                <tbody>
+                                    <tr><td>400</td><td>INVALID_INPUT</td><td>字段格式 / 严格布尔 / 畸形 JSON / 请求体非对象（版本非法时附 <code>details.field='version'</code>）</td></tr>
+                                    <tr><td>400</td><td>CORPID_IMMUTABLE</td><td>编辑时更换企业</td></tr>
+                                    <tr><td>400</td><td>RULE_API_CODE_INVALID</td><td>规则 <code>api_code</code> 格式非法（附 <code>details.field/min_length/max_length/allowed</code>）</td></tr>
+                                    <tr><td>400</td><td>WECHAT_CREDENTIAL_INVALID</td><td>CorpSecret/AgentID 无效</td></tr>
+                                    <tr><td>401</td><td>AUTH_REQUIRED</td><td>未登录或会话过期</td></tr>
+                                    <tr><td>403</td><td>APP_DISABLED</td><td>应用总开关关闭</td></tr>
+                                    <tr><td>403</td><td>DIRECT_SEND_DISABLED / RULE_DISABLED</td><td>子开关关闭</td></tr>
+                                    <tr><td>404</td><td>APP_NOT_FOUND / RULE_NOT_FOUND</td><td>不存在或已删除</td></tr>
+                                    <tr><td>409</td><td>APP_DRAFT_EXISTS / APP_DRAFT_MISMATCH</td><td>草稿冲突</td></tr>
+                                    <tr><td>409</td><td>APP_NOT_COMPLETED</td><td>草稿发送/切换/管理规则/成员读取</td></tr>
+                                    <tr><td>409</td><td>APP_ALREADY_COMPLETED</td><td>重复完成</td></tr>
+                                    <tr><td>409</td><td>APP_IDENTITY_CONFLICT</td><td>(corpid,agentid) 冲突</td></tr>
+                                    <tr><td>409</td><td>APP_VERSION_CONFLICT</td><td>版本过期（附 <code>details.version</code>）</td></tr>
+                                    <tr><td>409</td><td>RULE_API_CODE_CONFLICT</td><td>规则 <code>api_code</code> 被占用或已被保留（附 <code>details.api_code/conflict_scope</code>，<strong>不带</strong> <code>version</code>，与版本冲突可区分）</td></tr>
+                                    <tr><td>413</td><td>PAYLOAD_TOO_LARGE</td><td>请求体超限</td></tr>
+                                    <tr><td>428</td><td>APP_VERSION_REQUIRED</td><td>缺少 If-Match</td></tr>
+                                    <tr><td>500</td><td>INTERNAL_ERROR</td><td>未预期服务器错误（不泄露堆栈）</td></tr>
+                                    <tr><td>500</td><td>NOTIFY_CODE_NAMESPACE_CORRUPTED</td><td>同一编号同时被规则与配置占用（数据损坏，拒绝发送）</td></tr>
+                                    <tr><td>502</td><td>WECHAT_UNAVAILABLE</td><td>企业微信/网络不可用</td></tr>
+                                    <tr><td>503</td><td>RULE_API_CODE_GENERATION_FAILED</td><td>随机编号连续冲突，自动生成失败</td></tr>
+                                    <tr><td>428</td><td>APP_VERSION_REQUIRED</td><td>缺少 If-Match</td></tr>
+                                    <tr><td>500</td><td>INTERNAL_ERROR</td><td>未预期服务器错误（不泄露堆栈）</td></tr>
+                                    <tr><td>502</td><td>WECHAT_UNAVAILABLE</td><td>企业微信/网络不可用</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 集成示例 -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="code" class="h-6 w-6"></i>
+                    集成示例
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm space-y-6">
+                    <div class="alert alert-info">
+                        <i data-lucide="info" class="h-5 w-5"></i>
+                        <div class="text-sm">下方示例均按<strong>未启用通知密钥</strong>的最简形式给出。启用通知密钥后，请在每个请求追加 <code>X-Notify-Key</code> 头；完整 HMAC 四头签名范例见 <a href="#hmac" class="link link-primary">HMAC 签名模式</a>。</div>
+                    </div>
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">Shell脚本示例</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">#!/bin/bash
+
+# 监控服务器CPU使用率并发送告警
+CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+THRESHOLD=90
+
+if (( $(echo "$CPU_USAGE > $THRESHOLD" | bc -l) )); then
+  curl -X POST "https://your-server.example/api/notify/your-code-here" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"title\": \"CPU告警\",
+    \"content\": \"服务器CPU使用率: ${CPU_USAGE}%，超过阈值${THRESHOLD}%\"
+  }"
+fi</pre>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">Python示例</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">import requests
+import json
+
+def send_notification(title, content):
+    url = "https://your-server.example/api/notify/your-code-here"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "title": title,
+        "content": content
+    }
+    
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    return response.json()
+
+# 使用示例
+result = send_notification(
+    "数据库备份完成", 
+    "数据库备份已完成\n- 数据库：user_db\n- 备份大小：1.2GB\n- 备份时间：2023-09-15 02:00:00"
+)
+print(result)</pre>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-medium mb-2 text-lg">Node.js示例</h3>
+                        <div class="bg-base-200 p-3 rounded-md">
+<pre class="text-sm">const axios = require('axios');
+
+async function sendNotification(title, content) {
+  try {
+    const response = await axios.post('https://your-server.example/api/notify/your-code-here', {
+      title,
+      content
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('发送通知失败:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+}
+
+// 使用示例
+sendNotification('部署完成', '项目已成功部署到生产环境\n\n版本: v1.2.3\n部署时间: 2023-09-15 15:30:00')
+  .then(result => console.log('通知发送成功:', result))
+  .catch(err => console.error('通知发送失败:', err));</pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 常见问题 -->
+            <section>
+                <h2 class="app-type-page mb-3 sm:mb-4 flex items-center gap-2">
+                    <i data-lucide="help-circle" class="h-6 w-6"></i>
+                    常见问题
+                </h2>
+                <div class="bg-base-100 p-4 sm:p-6 rounded-lg shadow-sm">
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="font-medium">Q: 如何获取配置Code？</h3>
+                            <p>A: 在首页填写您的企业微信应用信息，验证并选择接收成员后，点击"生成通知API"按钮即可获取配置Code。</p>
+                        </div>
+                        <div>
+                            <h3 class="font-medium">Q: 消息发送失败怎么办？</h3>
+                            <p>A: 请检查以下几点：</p>
+                            <ul class="list-disc pl-5 mt-2">
+                                <li>配置Code是否正确</li>
+                                <li>请求参数格式是否正确</li>
+                                <li>企业微信应用的配置是否有效</li>
+                                <li>网络连接是否正常</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="font-medium">Q: 是否支持发送图片或文件？</h3>
+                            <p>A: 目前仅支持发送文本消息，不支持图片或文件附件。</p>
+                        </div>
+                        <div>
+                            <h3 class="font-medium">Q: 消息内容有长度限制吗？</h3>
+                            <p>A: 根据企业微信API的限制，消息内容不应超过2048个字符。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="text-center text-sm text-base-content/60 mb-4">
+        <p class="flex items-center justify-center gap-1">
+            <i data-lucide="external-link" class="icon-sm" aria-hidden="true"></i>
+            <a href="https://www.wangwangit.com/" target="_blank" rel="noopener noreferrer" class="hover:text-primary transition-colors">一只会飞的旺旺</a>
+        </p>
+    </footer>
+
+    <!-- SEC-011：脚本外置，避免 CSP 拦截内联脚本 -->
+    <script src="/public/api-docs.js"></script>
+</body>
+</html>

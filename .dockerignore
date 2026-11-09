@@ -1,0 +1,50 @@
+# ===== 环境变量与密钥（绝不打包进镜像）=====
+.env
+.env.*
+!.env.example
+env.template
+*.key
+*.pem
+
+# ===== 运行时数据与日志（由 volume 挂载）=====
+/database
+/database/**
+/logs
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-journal
+
+# ===== 本地编译产物、备份与测试报告 =====
+/qywx-push
+/qywx-push.exe
+*.exe
+*.bak
+*.bak-*
+*.test
+*.out
+coverage.*
+/tools
+/tools/**
+*.md
+
+# ===== 版本控制、IDE 与临时文件 =====
+.git
+.gitignore
+.gitattributes
+.worktrees
+worktrees
+.vscode
+.idea
+.claude
+.Codex
+.zcode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.tmp
+.cache
